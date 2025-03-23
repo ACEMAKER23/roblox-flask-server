@@ -1,0 +1,52 @@
+from flask import Flask, request, jsonify
+import requests
+import sqlite3
+
+app = Flask(__name__)
+
+
+def init_db():
+    conn = sqlite3.connect('player_data.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS players (userId TEXT PRIMARY KEY, points INTEGER, todayPlayTime INTEGER, cycleIndex INTEGER, timeLastCheck INTEGER, timeLastReset INTEGER)''')
+    conn.commit()
+    conn.close()
+
+
+@app.route('/get_player/<userId>', methods=['GET'])
+def get_player(userId):
+    conn = sqlite3.connect('player_data.db')
+    c = conn.cursor()
+    c.execute("SELECT points, todayPlayTime, cycleIndex, timeLastReset FROM players WHERE userId = ?", (userId,))
+    result = c.fetchone()
+    conn.close()
+    if result:
+        return jsonify({"points": result[0], "todayPlayTime": result[1], "cycleIndex": result[2], 
+                        "timeLastReset": result[3]})
+    return jsonify({"points": 0, "todayPlayTime": 0, "cycleIndex": 1, "timeLastReset": 0})
+
+@app.route('/update_player/<userId>/<int:points>/<int:todayPlayTime>/<int:cycleIndex>/<int:timeLastCheck>/<int:timeLastReset>', methods=['POST'])
+def update_player(userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset):
+    conn = sqlite3.connect('player_data.db')
+    c = conn.cursor()
+    c.execute("INSERT OR REPLACE INTO players (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset) VALUES (?, ?, ?, ?, ?, ?)", (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset))
+    conn.commit()
+    conn.close()
+    return jsonify({"points": points, "cycleIndex": cycleIndex, "todayPlayTime":todayPlayTime})
+
+
+@app.route('/get_timeLastCheck/<userId>', methods=['GET'])
+def get_timeLastCheck(userId):
+    conn = sqlite3.connect('player_data.db')
+    c = conn.cursor()
+    c.execute("SELECT timeLastCheck FROM players WHERE userId = ?", (userId,))
+    result = c.fetchone()
+    conn.close()
+    if result:
+        return jsonify({"timeLastCheck": result[0]})
+    return jsonify({"timeLastCheck": 0})
+
+
+if __name__ == '__main__':
+    init_db()  # Create the database and table on startup
+    app.run(host='0.0.0.0', port=5000)
