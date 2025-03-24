@@ -2,11 +2,11 @@ from flask import Flask, request, jsonify
 import psycopg2
 # requests is imported but unused—kept for potential future use
 import requests
+import psycopg2
+import os
 
 app = Flask(__name__)
-
-# Replace with your Supabase PostgreSQL connection string
-DB_CONN = "postgresql://postgres.fakggmzbhyoqcrllogdh:gtteXEC64xj2-4Z@aws-0-us-east-1.pooler.supabase.com:5432/postgres"
+DB_CONN = os.getenv("DATABASE_URL")  # Render provides this—no .env needed
 
 def get_db_connection():
     return psycopg2.connect(DB_CONN)
@@ -15,12 +15,12 @@ def init_db():
     conn = get_db_connection()
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS players (
-        userId TEXT PRIMARY KEY,
+        userid TEXT PRIMARY KEY,
         points INTEGER DEFAULT 0,
-        todayPlayTime INTEGER DEFAULT 0,
-        cycleIndex INTEGER DEFAULT 1,
-        timeLastCheck INTEGER DEFAULT 0,
-        timeLastReset INTEGER DEFAULT 0
+        todayplaytime INTEGER DEFAULT 0,
+        cycleindex INTEGER DEFAULT 1,
+        timelastcheck INTEGER DEFAULT 0,
+        timelastreset INTEGER DEFAULT 0
     )''')
     conn.commit()
     conn.close()
@@ -29,7 +29,7 @@ def init_db():
 def get_player(userId):
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT points, todayPlayTime, cycleIndex, timeLastReset FROM players WHERE userId = %s", (userId,))
+    c.execute("SELECT points, todayplaytime, cycleindex, timelastreset FROM players WHERE userid = %s", (userId,))
     result = c.fetchone()
     conn.close()
     if result:
@@ -42,10 +42,10 @@ def update_player(userId, points, todayPlayTime, cycleIndex, timeLastCheck, time
     conn = get_db_connection()
     c = conn.cursor()
     c.execute("""
-        INSERT INTO players (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset)
+        INSERT INTO players (userid, points, todayplaytime, cycleindex, timelastcheck, timelastreset)
         VALUES (%s, %s, %s, %s, %s, %s)
-        ON CONFLICT (userId) DO UPDATE
-        SET points = %s, todayPlayTime = %s, cycleIndex = %s, timeLastCheck = %s, timeLastReset = %s
+        ON CONFLICT (userid) DO UPDATE
+        SET points = %s, todayplaytime = %s, cycleindex = %s, timelastcheck = %s, timelastreset = %s
     """, (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset,
           points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset))
     conn.commit()
@@ -56,7 +56,7 @@ def update_player(userId, points, todayPlayTime, cycleIndex, timeLastCheck, time
 def get_timeLastCheck(userId):
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT timeLastCheck FROM players WHERE userId = %s", (userId,))
+    c.execute("SELECT timelastcheck FROM players WHERE userid = %s", (userId,))
     result = c.fetchone()
     conn.close()
     if result:
@@ -76,5 +76,5 @@ def all_players():
     return jsonify(players)
 
 if __name__ == '__main__':
-    init_db()  # Create the table on startup
+    init_db()
     app.run(host='0.0.0.0', port=5000)
