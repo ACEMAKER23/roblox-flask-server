@@ -66,7 +66,15 @@ def edit_db():
     conn.close()
     print(f"Edited userId: {userId} with playtime: {playtime}")
     return jsonify({"status": "success"})
-
+    
+def resetAllPlayer(userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset):
+    conn = sqlite3.connect('player_data.db')
+    c = conn.cursor()
+    c.execute("TRUNCATE TABLE")
+    conn.commit()
+    conn.close()
+    return jsonify({"points": points, "cycleIndex": cycleIndex, "todayPlayTime":todayPlayTime})
+    
 @app.route('/all_players', methods=['GET'])
 def all_players():
     conn = sqlite3.connect('player_data.db')
