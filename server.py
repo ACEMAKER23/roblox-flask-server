@@ -46,6 +46,38 @@ def get_timeLastCheck(userId):
         return jsonify({"timeLastCheck": result[0]})
     return jsonify({"timeLastCheck": 0})
 
+@app.route('/edit_db', methods=['POST'])
+def edit_db():
+    data = request.get_json()  # {"userId": "4081447945", "points": 5, "playtime": 7200.0, ...}
+    userId = data['userId']
+    points = data.get('points', 0)
+    todayPlayTime = data.get('todayPlayTime', 0.0)
+    cycleIndex = data.get('cycleIndex', 0.0)
+    timeLastCheck = data.get('timeLastCheck', 1)
+    timeLastReset = data.get('timeLastReset', 0.0)
+    conn = sqlite3.connect('player_data.db')
+    c = conn.cursor()
+    c.execute("""
+        INSERT OR REPLACE INTO players 
+        (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset))
+    conn.commit()
+    conn.close()
+    print(f"Edited userId: {userId} with playtime: {playtime}")
+    return jsonify({"status": "success"})
+
+@app.route('/all_players', methods=['GET'])
+def all_players():
+    conn = sqlite3.connect('player_data.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM players")
+    rows = c.fetchall()
+    conn.close()
+    players = [{"userId": row[0], "points": row[1], "todayPlayTime": row[2], 
+                "cycleIndex": row[3], "timeLastCheck": row[4], "timeLastReset": row[5]} 
+               for row in rows]
+    return jsonify(players)
 
 if __name__ == '__main__':
     init_db()  # Create the database and table on startup
