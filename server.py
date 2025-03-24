@@ -1,23 +1,35 @@
 from flask import Flask, request, jsonify
+import psycopg2
+# requests is imported but unused—kept for potential future use
 import requests
-import sqlite3
 
 app = Flask(__name__)
 
+# Replace with your Supabase PostgreSQL connection string
+DB_CONN = "postgresql://[user]:[password]@[host]:5432/[dbname]"
+
+def get_db_connection():
+    return psycopg2.connect(DB_CONN)
 
 def init_db():
-    conn = sqlite3.connect('player_data.db')
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS players (userId TEXT PRIMARY KEY, points INTEGER, todayPlayTime INTEGER, cycleIndex INTEGER, timeLastCheck INTEGER, timeLastReset INTEGER)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS players (
+        userId TEXT PRIMARY KEY,
+        points INTEGER DEFAULT 0,
+        todayPlayTime INTEGER DEFAULT 0,
+        cycleIndex INTEGER DEFAULT 1,
+        timeLastCheck INTEGER DEFAULT 0,
+        timeLastReset INTEGER DEFAULT 0
+    )''')
     conn.commit()
     conn.close()
 
-
 @app.route('/get_player/<userId>', methods=['GET'])
 def get_player(userId):
-    conn = sqlite3.connect('player_data.db')
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT points, todayPlayTime, cycleIndex, timeLastReset FROM players WHERE userId = ?", (userId,))
+    c.execute("SELECT points, todayPlayTime, cycleIndex, timeLastReset FROM players WHERE userId = %s", (userId,))
     result = c.fetchone()
     conn.close()
     if result:
@@ -27,28 +39,33 @@ def get_player(userId):
 
 @app.route('/update_player/<userId>/<int:points>/<int:todayPlayTime>/<int:cycleIndex>/<int:timeLastCheck>/<int:timeLastReset>', methods=['POST'])
 def update_player(userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset):
-    conn = sqlite3.connect('player_data.db')
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute("INSERT OR REPLACE INTO players (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset) VALUES (?, ?, ?, ?, ?, ?)", (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset))
+    c.execute("""
+        INSERT INTO players (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (userId) DO UPDATE
+        SET points = %s, todayPlayTime = %s, cycleIndex = %s, timeLastCheck = %s, timeLastReset = %s
+    """, (userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset,
+          points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset))
     conn.commit()
     conn.close()
-    return jsonify({"points": points, "cycleIndex": cycleIndex, "todayPlayTime":todayPlayTime})
-
+    return jsonify({"points": points, "cycleIndex": cycleIndex, "todayPlayTime": todayPlayTime})
 
 @app.route('/get_timeLastCheck/<userId>', methods=['GET'])
 def get_timeLastCheck(userId):
-    conn = sqlite3.connect('player_data.db')
+    conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT timeLastCheck FROM players WHERE userId = ?", (userId,))
+    c.execute("SELECT timeLastCheck FROM players WHERE userId = %s", (userId,))
     result = c.fetchone()
     conn.close()
     if result:
         return jsonify({"timeLastCheck": result[0]})
     return jsonify({"timeLastCheck": 0})
-    
+
 @app.route('/all_players', methods=['GET'])
 def all_players():
-    conn = sqlite3.connect('player_data.db')
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("SELECT * FROM players")
     rows = c.fetchall()
@@ -59,5 +76,5 @@ def all_players():
     return jsonify(players)
 
 if __name__ == '__main__':
-    init_db()  # Create the database and table on startup
+    init_db()  # Create the table on startup
     app.run(host='0.0.0.0', port=5000)
