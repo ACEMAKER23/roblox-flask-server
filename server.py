@@ -67,6 +67,7 @@ def edit_db():
     print(f"Edited userId: {userId} with playtime: {playtime}")
     return jsonify({"status": "success"})
     
+@app.route('/resetAllPlayer', methods=['POST'])    
 def resetAllPlayer(userId, points, todayPlayTime, cycleIndex, timeLastCheck, timeLastReset):
     conn = sqlite3.connect('player_data.db')
     c = conn.cursor()
