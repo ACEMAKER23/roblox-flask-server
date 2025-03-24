@@ -6,7 +6,7 @@ import requests
 app = Flask(__name__)
 
 # Replace with your Supabase PostgreSQL connection string
-DB_CONN = "postgresql://[user]:[password]@[host]:5432/[dbname]"
+DB_CONN = "postgresql://postgres:gtteXEC64xj2-4Z@db.fakggmzbhyoqcrllogdh.supabase.co:5432/postgres"
 
 def get_db_connection():
     return psycopg2.connect(DB_CONN)
