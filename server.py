@@ -178,7 +178,7 @@ def update_player(userId, politicalPower, militaryExperience, policeAuthority, t
 
     # Update specific group rank if not "general" # get the rank of the player after update and the threshhold for this rank
     specific_rank_info = None
-    if addTYep == "general"
+    if addType == "general":
         return jsonify({"Update": "No Point Change"}), 200
     elif addType == "party":
         specific_rank_info = get_partyRanks(politicalPower)
